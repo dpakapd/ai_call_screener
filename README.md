@@ -1,30 +1,58 @@
+
 # 📞 Asynchronous AI Call Screener
 
-An intelligent, asynchronous call-screening pipeline built with FastAPI, Twilio, and Google's Gemini 2.5 Flash. 
+An intelligent, autonomous call-screening pipeline built for the **Raspberry Pi Zero 2W** using FastAPI, Twilio, and Google's **Gemini 3.1 Flash-Lite**.
 
-Instead of relying on fragile, real-time WebSocket streams that struggle with phone line static and Voice Activity Detection (VAD) latency, this system acts as an asynchronous gatekeeper. It politely answers unknown calls, records the caller's message, and uses multimodal AI to analyze the raw audio file. If the call is a legitimate message, it sends a concise summary to your phone via WhatsApp. If it's a robocall or spam, it silently drops it.
+Instead of relying on fragile, real-time WebSocket streams, this system acts as an asynchronous gatekeeper. It politely answers unknown calls, records the message, and uses multimodal AI to analyze the raw audio. If the call is legitimate, it sends a summary to **Telegram**; if it's spam, it flags it accordingly while keeping your phone silent.
 
 ## ✨ Features
-* **Zero-Latency Greeting**: Uses Twilio's high-quality Amazon Polly neural voices to instantly greet callers without the lag of real-time AI generation.
-* **Multimodal Audio Evaluation**: Feeds the raw `.wav` file directly to Gemini 2.5 Flash, allowing the AI to detect the unnatural cadence, tape hiss, or dead air of automated spam dialers.
-* **WhatsApp Integration**: Sends instant, formatted summaries of legitimate voicemails directly to your personal WhatsApp.
-* **Cost-Effective**: Eliminates the high API costs of open-ended AI phone conversations. You only pay for a maximum of 20 seconds of audio processing per call.
+
+* **Autonomous Background Operation**: Runs as a permanent `systemd` service on Raspberry Pi, independent of any host computer.
+* **Ultra-Low Cost (March 2026)**: Utilizes **Gemini 3.1 Flash-Lite**, reducing AI processing costs by **75%** compared to previous generations.
+* **Zero-Latency Greeting**: Uses Twilio's **Amazon Polly (Aditi)** neural voice for instant, high-quality interaction.
+* **Telegram Integration**: Delivers formatted summaries with distinct headers for "New Voicemail" vs. "Likely Spam."
+* **Auto-Cleanup**: Includes an automated Cron job that deletes Twilio recordings every 10 days to maintain a $0.00 storage bill.
 
 ## 🏗️ Architecture Flow
-1. **The Gateway**: Twilio answers the call, plays the greeting, and records up to 20 seconds of audio.
-2. **The Orchestrator**: Twilio sends a webhook to the FastAPI backend. FastAPI instantly drops the call to free up the caller, then spins up a background task.
-3. **The Brain**: FastAPI downloads the audio and sends it to Gemini 2.5 Flash, forcing a strict JSON evaluation (`spam` vs. `legit`).
-4. **The Delivery**: If marked `legit`, FastAPI triggers the Twilio Messaging API to send the caller's name, number, and message summary to your WhatsApp.
+
+1. **The Gateway**: Twilio answers, plays the greeting, and records up to 20 seconds of audio.
+2. **The Orchestrator**: Twilio hits the FastAPI `/process-voicemail` webhook. FastAPI acknowledges the request and spins up a background task.
+3. **The Brain**: The Pi downloads the `.wav` file and sends it to **Gemini 3.1 Flash-Lite** for strict JSON evaluation (`spam` vs. `legit`).
+4. **The Delivery**: FastAPI fires a Telegram Bot API request to your phone with the caller's name, number, and a concise summary.
 
 ## 📋 Prerequisites
-* Python 3.11+
-* A Twilio Account (with a Voice number and the WhatsApp Sandbox configured)
-* A Google Gemini API Key
-* [Ngrok](https://ngrok.com/) (for local testing/port forwarding)
+
+* **Hardware**: Raspberry Pi Zero 2W (Running Raspberry Pi OS Lite).
+* **Services**: Twilio Account (Voice Number), Google Gemini API Key (Tier 1), Telegram Bot Token.
+* **Tunneling**: Ngrok with a static domain/URL.
 
 ## 🚀 Installation & Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone [https://github.com/yourusername/ai-call-screener.git](https://github.com/yourusername/ai-call-screener.git)
-   cd ai-call-screener
+1. **Clone & Environment**
+```bash
+git clone https://github.com/yourusername/ai-call-screener.git
+cd ai-call-screener
+python3 -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn twilio google-genai httpx python-multipart python-dotenv
+
+```
+
+
+2. **Configure Services**
+* Set up `fastapi.service` and `ngrok.service` in `/etc/systemd/system/` for 24/7 autonomy.
+* Configure `crontab -e` to run `cleanup_recordings.py` nightly at 3:00 AM.
+
+
+3. **Deploy**
+```bash
+sudo systemctl enable fastapi ngrok
+sudo systemctl start fastapi ngrok
+
+```
+
+
+
+---
+
+Would you like me to add a specific **"Troubleshooting"** section to this README that includes the `journalctl` commands we used to fix the model deprecation issues?
